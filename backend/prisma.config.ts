@@ -4,7 +4,7 @@ import { defineConfig } from 'prisma/config';
 const dbUrl =
   process.env.TURSO_DATABASE_URL ||
   process.env.DATABASE_URL ||
-  'file:./dev.db';
+  'file:/tmp/dev.db';
 
 export default defineConfig({
   earlyAccess: true,
