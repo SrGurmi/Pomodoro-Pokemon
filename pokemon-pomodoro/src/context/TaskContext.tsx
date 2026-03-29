@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiGet, apiPost, apiPatch, apiDelete } from '../lib/api';
 
 export interface Task {
   id: string;
@@ -6,102 +7,66 @@ export interface Task {
   completed: boolean;
   pomodorosCompleted: number;
   estimatedPomodoros: number;
-  createdAt: number;
+  createdAt: string | number;
 }
 
 type TaskContextType = {
   tasks: Task[];
-  addTask: (title: string, estimatedPomodoros: number) => void;
-  deleteTask: (id: string) => void;
-  toggleTask: (id: string) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
-  incrementPomodoro: (id: string) => void;
+  addTask: (title: string, estimatedPomodoros: number) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
+  toggleTask: (id: string) => Promise<void>;
+  updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+  incrementPomodoro: (id: string) => Promise<void>;
   activeTask: Task | null;
   setActiveTask: (task: Task | null) => void;
 };
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
-const TASKS_STORAGE_KEY = 'pomodoro-tasks';
-
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load tasks from localStorage on initial render
   useEffect(() => {
-    try {
-      const savedTasks = localStorage.getItem(TASKS_STORAGE_KEY);
-      if (savedTasks) {
-        setTasks(JSON.parse(savedTasks));
-      }
-    } catch (error) {
-      console.error('Failed to load tasks from localStorage', error);
-    } finally {
-      setIsInitialized(true);
-    }
+    apiGet<{ tasks: Task[] }>('/api/tasks')
+      .then(data => setTasks(data.tasks))
+      .catch(err => console.error('Failed to load tasks:', err));
   }, []);
 
-  // Save tasks to localStorage whenever they change
-  useEffect(() => {
-    if (isInitialized) {
-      try {
-        localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
-      } catch (error) {
-        console.error('Failed to save tasks to localStorage', error);
-      }
-    }
-  }, [tasks, isInitialized]);
+  const addTask = useCallback(async (title: string, estimatedPomodoros: number = 1) => {
+    const data = await apiPost<{ task: Task }>('/api/tasks', { title, estimatedPomodoros });
+    setTasks(prev => [data.task, ...prev]);
+  }, []);
 
-  const addTask = (title: string, estimatedPomodoros: number = 1) => {
-    const newTask: Task = {
-      id: Date.now().toString(),
-      title,
-      completed: false,
-      pomodorosCompleted: 0,
-      estimatedPomodoros,
-      createdAt: Date.now(),
-    };
-    setTasks(prev => [...prev, newTask]);
-  };
+  const deleteTask = useCallback(async (id: string) => {
+    await apiDelete(`/api/tasks/${id}`);
+    setTasks(prev => prev.filter(t => t.id !== id));
+    if (activeTask?.id === id) setActiveTask(null);
+  }, [activeTask]);
 
-  const deleteTask = (id: string) => {
-    setTasks(prev => prev.filter(task => task.id !== id));
-    if (activeTask?.id === id) {
-      setActiveTask(null);
-    }
-  };
+  const toggleTask = useCallback(async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const data = await apiPatch<{ task: Task }>(`/api/tasks/${id}`, { completed: !task.completed });
+    setTasks(prev => prev.map(t => t.id === id ? data.task : t));
+  }, [tasks]);
 
-  const toggleTask = (id: string) => {
-    setTasks(prev =>
-      prev.map(task =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
+  const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
+    const data = await apiPatch<{ task: Task }>(`/api/tasks/${id}`, updates);
+    setTasks(prev => prev.map(t => t.id === id ? data.task : t));
+  }, []);
 
-  const updateTask = (id: string, updates: Partial<Task>) => {
-    setTasks(prev =>
-      prev.map(task => (task.id === id ? { ...task, ...updates } : task))
-    );
-  };
-
-  const incrementPomodoro = (id: string) => {
-    setTasks(prev =>
-      prev.map(task =>
-        task.id === id
-          ? {
-              ...task,
-              pomodorosCompleted: task.pomodorosCompleted + 1,
-              completed:
-                task.estimatedPomodoros > 0 &&
-                task.pomodorosCompleted + 1 >= task.estimatedPomodoros,
-            }
-          : task
-      )
-    );
-  };
+  const incrementPomodoro = useCallback(async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const newPomodoros = task.pomodorosCompleted + 1;
+    const shouldComplete = task.estimatedPomodoros > 0 && newPomodoros >= task.estimatedPomodoros;
+    const data = await apiPatch<{ task: Task }>(`/api/tasks/${id}`, {
+      pomodorosCompleted: newPomodoros,
+      completed: shouldComplete,
+    });
+    setTasks(prev => prev.map(t => t.id === id ? data.task : t));
+  }, [tasks]);
 
   return (
     <TaskContext.Provider
@@ -123,8 +88,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useTasks = () => {
   const context = useContext(TaskContext);
-  if (context === undefined) {
-    throw new Error('useTasks must be used within a TaskProvider');
-  }
+  if (!context) throw new Error('useTasks must be used within a TaskProvider');
   return context;
 };

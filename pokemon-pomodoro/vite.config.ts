@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import path from 'path'
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 export default defineConfig({
-  plugins: [react(), basicSsl()],
+  plugins: [react(), ...(isDev ? [basicSsl()] : [])],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
