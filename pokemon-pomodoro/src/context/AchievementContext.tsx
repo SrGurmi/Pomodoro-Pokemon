@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { apiGet, apiPost } from '../lib/api';
 
 type Achievement = {
   id: string;
@@ -6,7 +7,7 @@ type Achievement = {
   description: string;
   unlocked: boolean;
   icon: string;
-  dateUnlocked?: Date;
+  unlockedAt?: string | null;
 };
 
 type AchievementContextType = {
@@ -16,72 +17,41 @@ type AchievementContextType = {
   checkAchievement: (id: string) => boolean;
 };
 
-const defaultAchievements: Achievement[] = [
-  {
-    id: 'first-task',
-    title: '¡Primera tarea completada!',
-    description: 'Completa tu primera tarea',
-    unlocked: false,
-    icon: '✅'
-  },
-  {
-    id: 'pomodoro-master',
-    title: 'Maestro del Pomodoro',
-    description: 'Completa 10 sesiones de Pomodoro',
-    unlocked: false,
-    icon: '🍅'
-  },
-  {
-    id: 'early-bird',
-    title: 'Madrugador',
-    description: 'Completa una tarea antes de las 9 AM',
-    unlocked: false,
-    icon: '🌅'
-  },
-  {
-    id: 'task-master',
-    title: 'Maestro de Tareas',
-    description: 'Completa 50 tareas',
-    unlocked: false,
-    icon: '🏆'
-  }
-];
-
 const AchievementContext = createContext<AchievementContextType | undefined>(undefined);
 
 export const AchievementProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [achievements, setAchievements] = useState<Achievement[]>(() => {
-    const saved = localStorage.getItem('achievements');
-    return saved ? JSON.parse(saved) : defaultAchievements;
-  });
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+
+  useEffect(() => {
+    apiGet<{ achievements: Achievement[] }>('/api/achievements')
+      .then(data => setAchievements(data.achievements))
+      .catch(err => console.error('Failed to load achievements:', err));
+  }, []);
 
   const unlockedAchievements = achievements.filter(a => a.unlocked);
 
-  const unlockAchievement = (id: string) => {
-    setAchievements(prev => {
-      const updated = prev.map(ach => 
-        ach.id === id && !ach.unlocked 
-          ? { ...ach, unlocked: true, dateUnlocked: new Date() } 
-          : ach
-      );
-      localStorage.setItem('achievements', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const checkAchievement = (id: string) => {
+  const unlockAchievement = useCallback((id: string) => {
     const achievement = achievements.find(a => a.id === id);
-    return achievement ? achievement.unlocked : false;
-  };
+    if (!achievement || achievement.unlocked) return;
+
+    apiPost<{ achievement: Achievement; alreadyUnlocked: boolean }>(`/api/achievements/${id}/unlock`)
+      .then(data => {
+        if (!data.alreadyUnlocked) {
+          setAchievements(prev =>
+            prev.map(a => a.id === id ? data.achievement : a)
+          );
+        }
+      })
+      .catch(err => console.error('Failed to unlock achievement:', err));
+  }, [achievements]);
+
+  const checkAchievement = useCallback((id: string) => {
+    return achievements.find(a => a.id === id)?.unlocked ?? false;
+  }, [achievements]);
 
   return (
-    <AchievementContext.Provider 
-      value={{ 
-        achievements, 
-        unlockedAchievements, 
-        unlockAchievement, 
-        checkAchievement 
-      }}
+    <AchievementContext.Provider
+      value={{ achievements, unlockedAchievements, unlockAchievement, checkAchievement }}
     >
       {children}
     </AchievementContext.Provider>
@@ -90,8 +60,6 @@ export const AchievementProvider: React.FC<{ children: ReactNode }> = ({ childre
 
 export const useAchievements = () => {
   const context = useContext(AchievementContext);
-  if (context === undefined) {
-    throw new Error('useAchievements must be used within an AchievementProvider');
-  }
+  if (!context) throw new Error('useAchievements must be used within an AchievementProvider');
   return context;
 };

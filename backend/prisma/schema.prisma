@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String            @id @default(cuid())
+  email         String            @unique
+  username      String            @unique
+  passwordHash  String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  tasks         Task[]
+  sessions      PomodoroSession[]
+  pokemon       PokemonState?
+  achievements  UserAchievement[]
+  settings      UserSettings?
+  refreshTokens RefreshToken[]
+}
+
+model Task {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title              String
+  completed          Boolean  @default(false)
+  pomodorosCompleted Int      @default(0)
+  estimatedPomodoros Int      @default(1)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model PomodoroSession {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId    String?
+  duration  Int       @default(0)
+  type      String    @default("work")
+  completed Boolean   @default(false)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+}
+
+model PokemonState {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pokemonId Int      @default(25)
+  name      String   @default("pikachu")
+  level     Int      @default(1)
+  xp        Int      @default(0)
+  type      String   @default("electric")
+  updatedAt DateTime @updatedAt
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+model UserSettings {
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workDuration  Int     @default(25)
+  breakDuration Int     @default(5)
+  longBreak     Int     @default(15)
+  theme         String  @default("dark")
+  pokemonType   String  @default("electric")
+  soundEnabled  Boolean @default(true)
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
