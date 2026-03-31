@@ -1,5 +1,5 @@
 // src/App.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import PomodoroTimer from './components/PomodoroTimer';
 import { Toaster } from './components/ui/toaster';
 import { PokemonProvider } from './context/PokemonContext';
@@ -18,6 +18,7 @@ import { AuthScreen } from './components/auth/AuthScreen';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const [showWelcome, setShowWelcome] = useState(true);
 
   if (isLoading) {
     return (
@@ -75,7 +76,8 @@ function AppContent() {
                   <AchievementToast
                     title={`¡Bienvenido de vuelta, ${user?.username}!`}
                     description="Comienza completando tareas para ganar experiencia."
-                    onClose={() => {}}
+                    onClose={() => setShowWelcome(false)}
+                    show={showWelcome}
                     type="achievement"
                   />
                 </div>
