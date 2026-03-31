@@ -42,7 +42,7 @@ const TaskList: React.FC = () => {
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 flex items-center justify-center">
-          <Pokeball size={32} animated />
+          <Pokeball size={32} />
         </div>
         <h2 className="text-white font-bold text-lg tracking-wide flex-1">Misiones</h2>
         {done.length > 0 && (
