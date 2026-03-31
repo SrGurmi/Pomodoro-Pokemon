@@ -2,21 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos personalizados */
-body {
-  @apply transition-colors duration-200;
-}
-
-/* Animaciones personalizadas */
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
+@layer base {
+  body {
+    background-color: #07071a;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
-.animate-bounce-slow {
-  animation: bounce 3s infinite;
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35),
+      inset 0 1px 0 rgba(255,255,255,0.15),
+      inset 0 -1px 0 rgba(0,0,0,0.10);
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.20),
+      inset 0 -1px 0 rgba(0,0,0,0.15);
+  }
+  .glass-input {
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    color: white;
+  }
+  .glass-input:focus {
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+    outline: none;
+  }
+  .glass-input::placeholder { color: rgba(255,255,255,0.25); }
 }
+
+/* ── Pokeball floating ── */
+@keyframes float-a {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  50%     { transform: translateY(-22px) rotate(180deg); }
+}
+@keyframes float-b {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  33%     { transform: translateY(-16px) rotate(120deg); }
+  66%     { transform: translateY(8px) rotate(240deg); }
+}
+@keyframes float-c {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  25%     { transform: translateY(-28px) rotate(90deg); }
+  75%     { transform: translateY(12px) rotate(270deg); }
+}
+/* ── Stars ── */
+@keyframes twinkle {
+  0%,100% { opacity: 0.12; transform: scale(0.7); }
+  50%     { opacity: 0.95; transform: scale(1.4); }
+}
+/* ── Glow rings ── */
+@keyframes ring-glow {
+  0%,100% { filter: drop-shadow(0 0 6px rgba(239,68,68,0.35)); }
+  50%     { filter: drop-shadow(0 0 20px rgba(239,68,68,0.85)); }
+}
+@keyframes ring-glow-green {
+  0%,100% { filter: drop-shadow(0 0 6px rgba(16,185,129,0.35)); }
+  50%     { filter: drop-shadow(0 0 20px rgba(16,185,129,0.85)); }
+}
+/* ── Companion ── */
+@keyframes bounce-gentle {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-9px); }
+}
+@keyframes shake {
+  0%,100% { transform: rotate(0deg); }
+  20%     { transform: rotate(-14deg); }
+  40%     { transform: rotate(14deg); }
+  60%     { transform: rotate(-8deg); }
+  80%     { transform: rotate(8deg); }
+}
+@keyframes aurora {
+  0%,100% { opacity: 0.22; transform: scale(1); }
+  50%     { opacity: 0.40; transform: scale(1.07); }
+}
+
+.pokeball-float-a   { animation: float-a 9s ease-in-out infinite; }
+.pokeball-float-b   { animation: float-b 7s ease-in-out infinite; }
+.pokeball-float-c   { animation: float-c 5s ease-in-out infinite; }
+.animate-twinkle    { animation: twinkle 3s ease-in-out infinite; }
+.animate-ring-glow        { animation: ring-glow 2s ease-in-out infinite; }
+.animate-ring-glow-green  { animation: ring-glow-green 2s ease-in-out infinite; }
+.animate-bounce-gentle    { animation: bounce-gentle 2.5s ease-in-out infinite; }
+.animate-shake            { animation: shake 0.55s ease-in-out; }
+.animate-aurora           { animation: aurora 5s ease-in-out infinite; }

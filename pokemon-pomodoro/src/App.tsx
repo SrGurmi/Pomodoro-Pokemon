@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useState } from 'react';
 import PomodoroTimer from './components/PomodoroTimer';
 import { Toaster } from './components/ui/toaster';
@@ -9,12 +8,13 @@ import { MusicProvider } from './context/MusicContext';
 import { AchievementProvider } from './context/AchievementContext';
 import { SpotifyProvider } from './context/SpotifyContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import MusicPlayer from './components/MusicPlayer';
 import TaskList from './components/TaskList';
 import PokemonCompanion from './components/pokemon/PokemonCompanion';
-import PokemonTypeSelector from './components/pokemon/PokemonTypeSelector';
 import AchievementToast from './components/pokemon/AchievementToast';
 import { AuthScreen } from './components/auth/AuthScreen';
+import { CosmicBackground } from './components/ui/CosmicBackground';
+import { Masterball } from './components/ui/PokeBalls';
+import { motion } from 'framer-motion';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
@@ -22,18 +22,20 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <div className="text-white text-center">
-          <div className="text-5xl mb-4">🎮</div>
-          <p className="text-lg opacity-70">Cargando...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center relative">
+        <CosmicBackground />
+        <motion.div className="text-center z-10"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
+            <Masterball size={56} />
+          </motion.div>
+          <p className="text-white/40 text-sm mt-4 tracking-widest">CARGANDO...</p>
+        </motion.div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <AuthScreen />;
-  }
+  if (!isAuthenticated) return <AuthScreen />;
 
   return (
     <ThemeProvider>
@@ -42,40 +44,49 @@ function AppContent() {
           <MusicProvider>
             <SpotifyProvider>
               <AchievementProvider>
-                <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white transition-colors duration-200">
-                  <header className="flex items-center justify-between px-6 py-3 border-b border-white/10">
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-red-500 to-blue-500 bg-clip-text text-transparent">
-                      PokéTimer
-                    </h1>
+                <div className="min-h-screen relative">
+                  <CosmicBackground />
+
+                  {/* Header */}
+                  <header className="relative z-10 glass border-b border-white/8 px-5 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Masterball size={28} />
+                      <span className="font-bold text-lg tracking-tight">PokéTimer</span>
+                    </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm opacity-60">
-                        Hola, <span className="font-medium opacity-100">{user?.username}</span>
+                      <span className="text-white/40 text-xs hidden sm:block">
+                        Entrenador <span className="text-white/80 font-medium">{user?.username}</span>
                       </span>
-                      <button
-                        onClick={logout}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                      >
+                      <motion.button onClick={logout} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                        className="text-xs px-3 py-1.5 glass rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer">
                         Salir
-                      </button>
+                      </motion.button>
                     </div>
                   </header>
 
-                  <main className="container mx-auto px-4 py-6">
-                    <div className="max-w-2xl mx-auto">
+                  {/* Main content */}
+                  <main className="relative z-10 container mx-auto px-4 py-6 max-w-3xl">
+                    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.1 }}>
                       <PomodoroTimer />
-                      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    </motion.div>
+
+                    <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}>
                         <PokemonCompanion />
-                        <div className="space-y-6">
-                          <MusicPlayer />
-                          <TaskList />
-                        </div>
-                      </div>
+                      </motion.div>
+                      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}>
+                        <TaskList />
+                      </motion.div>
                     </div>
                   </main>
+
                   <Toaster />
                   <AchievementToast
-                    title={`¡Bienvenido de vuelta, ${user?.username}!`}
-                    description="Comienza completando tareas para ganar experiencia."
+                    title={`¡Bienvenido, ${user?.username}!`}
+                    description="Completa tareas para ganar XP y subir de nivel."
                     onClose={() => setShowWelcome(false)}
                     show={showWelcome}
                     type="achievement"
@@ -90,12 +101,10 @@ function AppContent() {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <AuthProvider>
       <AppContent />
     </AuthProvider>
   );
 }
-
-export default App;
