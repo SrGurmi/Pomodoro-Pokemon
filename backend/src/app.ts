@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { prisma } from './lib/prisma';
 
@@ -12,33 +12,19 @@ import settingsRoutes from './routes/settings';
 
 const app = express();
 
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',')
-  : ['http://localhost:3000'];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.some(o => origin.startsWith(o))) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-}));
-
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-// Run migrations on startup (needed for ephemeral /tmp DB on serverless)
-async function ensureDatabase() {
+// Initialize DB tables (needed for ephemeral /tmp SQLite on serverless)
+const dbReady: Promise<void> = (async () => {
   try {
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "User" (
       "id" TEXT NOT NULL PRIMARY KEY,
-      "email" TEXT NOT NULL,
-      "username" TEXT NOT NULL,
+      "email" TEXT NOT NULL UNIQUE,
+      "username" TEXT NOT NULL UNIQUE,
       "passwordHash" TEXT NOT NULL,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" DATETIME NOT NULL
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`);
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "Task" (
       "id" TEXT NOT NULL PRIMARY KEY,
@@ -48,7 +34,7 @@ async function ensureDatabase() {
       "pomodorosCompleted" INTEGER NOT NULL DEFAULT 0,
       "estimatedPomodoros" INTEGER NOT NULL DEFAULT 1,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" DATETIME NOT NULL,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE
     )`);
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PomodoroSession" (
@@ -100,15 +86,15 @@ async function ensureDatabase() {
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE
     )`);
-    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`);
-    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_username_key" ON "User"("username")`);
-    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "RefreshToken_token_key" ON "RefreshToken"("token")`);
   } catch (err) {
     console.error('DB init error:', err);
   }
-}
+})();
 
-ensureDatabase();
+// Wait for DB before processing any request
+app.use((_req: Request, _res: Response, next: NextFunction) => {
+  dbReady.then(next).catch(next);
+});
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
